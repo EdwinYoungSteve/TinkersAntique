@@ -607,7 +607,7 @@ public final class TinkerMaterials {
       ItemStack shard = TinkerTools.shard.getItemstackWithMaterial(material);
 
       material.addRecipeMatch(new RecipeMatch.ItemCombination(Material.VALUE_Shard, shard));
-      if(material.getShard() != null) {
+      if(material.getShard().isEmpty()) {
         material.setShard(shard);
       }
     }
