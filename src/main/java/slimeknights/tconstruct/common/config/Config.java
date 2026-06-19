@@ -59,6 +59,8 @@ public final class Config {
   public static int liquidTransferRate = 6;
   public static boolean vanillaToolBreaking = false;
   public static boolean oldMattockAndKama = false;
+  public static boolean jeiGuidebookButton = false;
+  public static boolean repairToolsOnAnvils = false;
 
   private static String[] craftingStationBlacklistArray = new String[] {
       "de.ellpeck.actuallyadditions.mod.tile.TileEntityItemViewer"
@@ -108,9 +110,11 @@ public final class Config {
           "techguns:zombieminer;true;minecraft:skull:2",
           "techguns:zombiepoliceman;true;minecraft:skull:2",
           "techguns:zombiesoldier;true;minecraft:skull:2",
-          "thaumcraft:CultistCleric;false;minecraft:skull:2",
-          "thaumcraft:CultistKnight;false;minecraft:skull:2",
-          "thaumcraft:CultistLeader;false;minecraft:skull:2"
+          "thaumcraft:CultistCleric;false;minecraft:skull:3",
+          "thaumcraft:CultistKnight;false;minecraft:skull:3",
+          "thaumcraft:CultistLeader;false;minecraft:skull:3",
+          "tropicraft:tropiskeleton;false;minecraft:skull:0",
+          "tropicraft:tropicreeper;false;minecraft:skull:4"
   };
   public static String[] entityMelting = {
           "minecraft:blaze;true;blazing_blood;20",
@@ -169,7 +173,8 @@ public final class Config {
           "natura:babyheatscarspider;false;blazing_blood;20",
           "natura:heatscarspider;false;blazing_blood;40",
           "thaumcraft:Firebat;false;blazing_blood;5",
-          "thaumcraft:Pech;true;gold;10"
+          "thaumcraft:Pech;true;gold;10",
+          "tropicraft:tropiskeleton;true;notmilk;20"
   };
   public static String[] materialPriorities = {
           "tconstruct"
@@ -247,10 +252,11 @@ public final class Config {
   static ConfigCategory Modules;
   static ConfigCategory Gameplay;
   static ConfigCategory Worldgen;
+  static ConfigCategory Experimental;
   static ConfigCategory ClientSide;
   
   public static void load(FMLPreInitializationEvent event) {
-    configFile = new Configuration(event.getSuggestedConfigurationFile(), "0.3", false);
+    configFile = new Configuration(event.getSuggestedConfigurationFile(), "0.4", false);
 
     MinecraftForge.EVENT_BUS.register(instance);
 
@@ -577,11 +583,19 @@ public final class Config {
     // Experimental
     {
       String cat = "experimental";
-      Worldgen = configFile.getCategory(cat);
+      Experimental = configFile.getCategory(cat);
 
       prop = configFile.get(cat, "vanillaToolBreaking", vanillaToolBreaking);
       prop.setComment("[EXPERIMENTAL] If true, tools will be fully destroyed like vanilla tools when durability is depleted. You monster!");
       vanillaToolBreaking = prop.getBoolean();
+
+      prop = configFile.get(cat, "jeiGuidebookButton", jeiGuidebookButton);
+      prop.setComment("[EXPERIMENTAL] If true, a button is added to JEI material pages that opens the 'Materials and You' book at the approximate location.");
+      jeiGuidebookButton = prop.getBoolean();
+
+      prop = configFile.get(cat, "repairToolsOnAnvils", repairToolsOnAnvils);
+      prop.setComment("[EXPERIMENTAL] If tools can be repaired or upgraded on anvils like vanilla equipment.");
+      repairToolsOnAnvils = prop.getBoolean();
     }
     // Clientside
     {

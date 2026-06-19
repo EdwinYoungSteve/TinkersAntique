@@ -69,18 +69,6 @@ public class CastingRecipeChecker {
       }
     }
 
-    for(ICastingRecipe irecipe : TinkerRegistry.getAllBasinCastingRecipes()) {
-      if(irecipe instanceof CastingRecipe) {
-        CastingRecipe recipe = (CastingRecipe) irecipe;
-
-        recipeWrapper = new CastingRecipeWrapper(recipe, JEIPlugin.castingCategory.castingBasin);
-
-        if(recipeWrapper.isValid(true)) {
-          recipes.add(recipeWrapper);
-        }
-      }
-    }
-
     return recipes;
   }
 
