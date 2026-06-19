@@ -33,6 +33,7 @@ import slimeknights.tconstruct.library.materials.HeadMaterialStats;
 import slimeknights.tconstruct.library.materials.Material;
 import slimeknights.tconstruct.library.materials.MaterialTypes;
 import slimeknights.tconstruct.library.modifiers.IModifier;
+import slimeknights.tconstruct.library.modifiers.ModifierNBT;
 import slimeknights.tconstruct.library.modifiers.TinkerGuiException;
 import slimeknights.tconstruct.library.tinkering.IRepairable;
 import slimeknights.tconstruct.library.tinkering.MaterialItem;
@@ -522,6 +523,7 @@ public final class ToolBuilder {
 
     // save the old modifiers list and clean up all tags that get set by modifiers/traits
     NBTTagList modifiersTagOld = TagUtil.getModifiersTagList(rootNBT);
+    NBTTagList traitsTagOld = TagUtil.getTraitsTagList(rootNBT);
     rootNBT.removeTag(Tags.TOOL_MODIFIERS); // the active-modifiers tag
     rootNBT.setTag(Tags.TOOL_MODIFIERS, new NBTTagList());
     rootNBT.removeTag("ench"); // and the enchantments tag
@@ -536,6 +538,8 @@ public final class ToolBuilder {
 
     // reapply modifiers
     NBTTagList modifiers = TagUtil.getBaseModifiersTagList(rootNBT);
+    restoreMissingBaseModifiers(rootNBT, modifiers, modifiersTagOld, traitsTagOld);
+    modifiers = TagUtil.getBaseModifiersTagList(rootNBT);
     NBTTagList modifiersTag = TagUtil.getModifiersTagList(rootNBT);
     // copy over and reapply all relevant modifiers
     for(int i = 0; i < modifiers.tagCount(); i++) {
@@ -584,6 +588,26 @@ public final class ToolBuilder {
 
     if(freeModifiers < 0) {
       throw new TinkerGuiException(Util.translateFormatted("gui.error.not_enough_modifiers", -freeModifiers));
+    }
+  }
+
+  private static void restoreMissingBaseModifiers(NBTTagCompound rootNBT, NBTTagList modifiers, NBTTagList oldModifierTags, NBTTagList oldTraits) {
+    boolean changed = false;
+    for(int i = 0; i < oldModifierTags.tagCount(); i++) {
+      NBTTagCompound tag = oldModifierTags.getCompoundTagAt(i);
+      String identifier = ModifierNBT.readTag(tag).identifier;
+      if(identifier.isEmpty()
+         || TinkerUtil.getIndexInList(modifiers, identifier) >= 0
+         || TinkerUtil.getIndexInList(oldTraits, identifier) >= 0) {
+        continue;
+      }
+
+      modifiers.appendTag(new NBTTagString(identifier));
+      changed = true;
+    }
+
+    if(changed) {
+      TagUtil.setBaseModifiersTagList(rootNBT, modifiers);
     }
   }
 
