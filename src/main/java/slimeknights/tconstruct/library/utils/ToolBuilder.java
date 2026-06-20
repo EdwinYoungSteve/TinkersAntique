@@ -346,6 +346,9 @@ public final class ToolBuilder {
       return ItemStack.EMPTY;
     }
 
+    TinkersItem tinkersItem = (TinkersItem) toolStack.getItem();
+    NBTTagList oldMaterialTraits = getMaterialTraitsTagList(TinkerUtil.getMaterialsFromTagList(materialList), tinkersItem);
+
     // We now know which parts to replace with which inputs. Yay. Now we only have to do so.
     // to do so we simply switch out the materials used and rebuild the tool
     assigned.forEachEntry((i, j) -> {
@@ -360,7 +363,6 @@ public final class ToolBuilder {
     });
 
     // check that each material is still compatible with each modifier
-    TinkersItem tinkersItem = (TinkersItem) toolStack.getItem();
     ItemStack copyToCheck = tinkersItem.buildItem(TinkerUtil.getMaterialsFromTagList(materialList));
     // this includes traits
     NBTTagList modifiers = TagUtil.getBaseModifiersTagList(toolStack);
@@ -406,7 +408,7 @@ public final class ToolBuilder {
     TagUtil.setBaseMaterialsTagList(output, materialList);
     TagUtil.setBaseModifiersTagList(output, modifierList);
     NBTTagCompound tag = TagUtil.getTagSafe(output);
-    rebuildTool(tag, (TinkersItem) output.getItem());
+    rebuildTool(tag, (TinkersItem) output.getItem(), oldMaterialTraits);
     output.setTagCompound(tag);
 
     // check if the output has enough durability. we only allow it if the result would not be broken
@@ -499,6 +501,12 @@ public final class ToolBuilder {
    *                data.
    */
   public static void rebuildTool(NBTTagCompound rootNBT, TinkersItem tinkersItem) throws TinkerGuiException {
+    NBTTagList materialTag = TagUtil.getBaseMaterialsTagList(rootNBT);
+    List<Material> materials = TinkerUtil.getMaterialsFromTagList(materialTag);
+    rebuildTool(rootNBT, tinkersItem, getMaterialTraitsTagList(materials, tinkersItem));
+  }
+
+  private static void rebuildTool(NBTTagCompound rootNBT, TinkersItem tinkersItem, NBTTagList oldMaterialTraits) throws TinkerGuiException {
     boolean broken = TagUtil.getToolTag(rootNBT).getBoolean(Tags.BROKEN);
     // Recalculate tool base stats from material stats
     NBTTagList materialTag = TagUtil.getBaseMaterialsTagList(rootNBT);
@@ -523,7 +531,6 @@ public final class ToolBuilder {
 
     // save the old modifiers list and clean up all tags that get set by modifiers/traits
     NBTTagList modifiersTagOld = TagUtil.getModifiersTagList(rootNBT);
-    NBTTagList traitsTagOld = TagUtil.getTraitsTagList(rootNBT);
     rootNBT.removeTag(Tags.TOOL_MODIFIERS); // the active-modifiers tag
     rootNBT.setTag(Tags.TOOL_MODIFIERS, new NBTTagList());
     rootNBT.removeTag("ench"); // and the enchantments tag
@@ -538,7 +545,7 @@ public final class ToolBuilder {
 
     // reapply modifiers
     NBTTagList modifiers = TagUtil.getBaseModifiersTagList(rootNBT);
-    restoreMissingBaseModifiers(rootNBT, modifiers, modifiersTagOld, traitsTagOld);
+    restoreMissingBaseModifiers(rootNBT, modifiers, modifiersTagOld, oldMaterialTraits);
     modifiers = TagUtil.getBaseModifiersTagList(rootNBT);
     NBTTagList modifiersTag = TagUtil.getModifiersTagList(rootNBT);
     // copy over and reapply all relevant modifiers
@@ -591,14 +598,45 @@ public final class ToolBuilder {
     }
   }
 
-  private static void restoreMissingBaseModifiers(NBTTagCompound rootNBT, NBTTagList modifiers, NBTTagList oldModifierTags, NBTTagList oldTraits) {
+  private static NBTTagList getMaterialTraitsTagList(List<Material> materials, TinkersItem tinkersItem) {
+    NBTTagList materialTraits = new NBTTagList();
+    List<PartMaterialType> pms = tinkersItem.getRequiredComponents();
+    int size = Math.min(materials.size(), pms.size());
+
+    for(int i = 0; i < size; i++) {
+      PartMaterialType required = pms.get(i);
+      Material material = materials.get(i);
+      for(ITrait trait : required.getApplicableTraitsForMaterial(material)) {
+        addMaterialTraitIdentifier(materialTraits, trait);
+      }
+    }
+
+    return materialTraits;
+  }
+
+  private static void addMaterialTraitIdentifier(NBTTagList materialTraits, ITrait trait) {
+    String identifier = trait.getIdentifier();
+    if(TinkerUtil.getIndexInList(materialTraits, identifier) < 0) {
+      materialTraits.appendTag(new NBTTagString(identifier));
+    }
+
+    IModifier modifier = TinkerRegistry.getModifier(identifier);
+    if(modifier instanceof AbstractTrait) {
+      String modifierIdentifier = ((AbstractTrait) modifier).getModifierIdentifier();
+      if(TinkerUtil.getIndexInList(materialTraits, modifierIdentifier) < 0) {
+        materialTraits.appendTag(new NBTTagString(modifierIdentifier));
+      }
+    }
+  }
+
+  private static void restoreMissingBaseModifiers(NBTTagCompound rootNBT, NBTTagList modifiers, NBTTagList oldModifierTags, NBTTagList oldMaterialTraits) {
     boolean changed = false;
     for(int i = 0; i < oldModifierTags.tagCount(); i++) {
       NBTTagCompound tag = oldModifierTags.getCompoundTagAt(i);
       String identifier = ModifierNBT.readTag(tag).identifier;
       if(identifier.isEmpty()
          || TinkerUtil.getIndexInList(modifiers, identifier) >= 0
-         || TinkerUtil.getIndexInList(oldTraits, identifier) >= 0) {
+         || TinkerUtil.getIndexInList(oldMaterialTraits, identifier) >= 0) {
         continue;
       }
 
